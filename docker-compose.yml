@@ -1,0 +1,10 @@
+version: "3"
+services:
+  builder:
+    build: .
+    image: "debian-skeleton:slim"
+    container_name: skeleton-builder
+    volumes:
+      - ".:/root/builder"
+    working_dir: /root
+    command: /bin/bash -c "./builder/build-frontend.sh && ./builder/build-backend.sh && ./builder/build-package.sh && tail -f /dev/null"
