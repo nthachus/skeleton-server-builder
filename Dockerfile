@@ -10,7 +10,7 @@ RUN echo "deb http://deb.nodesource.com/node_10.x stretch main" > /etc/apt/sourc
   build-essential zlib1g-dev ruby-dev libpq-dev \
   nodejs \
   wget unzip \
- && rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/*
+ && rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/* /etc/apt/sources.list.d/nodesource.list
 
 RUN npm install -g yarn@1 \
  && yarn config set disable-self-update-check true -g \
