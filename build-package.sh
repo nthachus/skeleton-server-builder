@@ -97,7 +97,8 @@ DB_PWD=`grep -i 'password:' $APP_PATH/config/database.yml | sed 's/^.*: //'`
 # DEBIAN files
 mkdir -p $PKG_ROOT/DEBIAN
 ( find $PKG_ROOT/etc -type f -not -path "$PKG_ROOT/etc/ssl/*" | sort ; ls -1 $APP_PATH/config/*.yml ) | sed "s,^$PKG_ROOT,," > $PKG_ROOT/DEBIAN/conffiles
-find $PKG_ROOT \( -type f -or -type l \) -not -path "$PKG_ROOT/etc/*" -not -path "$PKG_ROOT/DEBIAN/*" -exec md5sum {} + | sort -k2 | sed "s, \+\*\?$PKG_ROOT/,  ," > $PKG_ROOT/DEBIAN/md5sums
+( find $PKG_ROOT \( -type f -or -type l \) -not -path "$PKG_ROOT/etc/*" -not -path "$PKG_ROOT/DEBIAN/*" -not -regex "$APP_PATH/config/[^/]*\.yml" -exec md5sum {} + \
+  ; find $PKG_ROOT/etc/ssl -type f -exec md5sum {} + ) | sort -k2 | sed "s, \+\*\?$PKG_ROOT/,  ," > $PKG_ROOT/DEBIAN/md5sums
 
 echo "Package: skeleton-server
 Version: $PKG_VER
