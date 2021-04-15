@@ -88,7 +88,7 @@ echo "$APP_HOME/log/*.log {
   compress
   delaycompress
   notifempty
-  create 0640 $RUN_USER $RUN_GROUP
+  copytruncate
 }" > $PKG_ROOT/etc/logrotate.d/skeleton-api
 
 PKG_SIZE=`du -s -BK $PKG_ROOT | sed 's/K.*//'`
