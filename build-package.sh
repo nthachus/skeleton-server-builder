@@ -74,12 +74,14 @@ SyslogIdentifier=unicorn-skeleton
 [Install]
 WantedBy=multi-user.target" > $PKG_ROOT/lib/systemd/system/unicorn-skeleton.service
 
+RAKE_ARGS='RACK_ENV=production >> log/cron.stdout.log 2>> log/cron.stderr.log'
+
 # Cronjobs
 mkdir -p $PKG_ROOT/etc/cron.d $PKG_ROOT/etc/logrotate.d
-echo "* *  * * *  $RUN_USER  cd $APP_HOME && rake app:delete_expired_uploads RACK_ENV=production >> log/cron.tasks.log 2>&1
-* *  * * *  $RUN_USER  cd $APP_HOME && rake app:identify_file_types RACK_ENV=production >> log/cron.tasks.log 2>&1
-*/2 *  * * *  $RUN_USER  cd $APP_HOME && rake app:compute_file_checksums RACK_ENV=production >> log/cron.tasks.log 2>&1
-*/3 *  * * *  $RUN_USER  cd $APP_HOME && rake app:delete_expired_sessions RACK_ENV=production >> log/cron.tasks.log 2>&1" > $PKG_ROOT/etc/cron.d/skeleton-server
+echo "* *  * * *  $RUN_USER  cd $APP_HOME && rake app:delete_expired_uploads $RAKE_ARGS
+* *  * * *  $RUN_USER  cd $APP_HOME && rake app:identify_file_types $RAKE_ARGS
+*/2 *  * * *  $RUN_USER  cd $APP_HOME && rake app:compute_file_checksums $RAKE_ARGS
+*/3 *  * * *  $RUN_USER  cd $APP_HOME && rake app:delete_expired_sessions $RAKE_ARGS" > $PKG_ROOT/etc/cron.d/skeleton-server
 
 echo "$APP_HOME/log/*.log {
   weekly
