@@ -3,7 +3,7 @@ set -x
 
 PRJ_NAME=angular8-skeleton
 PRJ_DIR=$PRJ_NAME-main
-DIST_FILE="$(dirname "`realpath "$0"`")/$PRJ_NAME.tgz"
+DIST_FILE="$(dirname "`realpath "$0"`")/$PRJ_NAME$1.tgz"
 
 if [ ! -d $PRJ_NAME ]; then
   if [ ! -d $PRJ_DIR ]; then

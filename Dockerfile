@@ -14,7 +14,7 @@ RUN echo "deb http://deb.nodesource.com/node_10.x stretch main" > /etc/apt/sourc
 
 RUN npm install -g yarn@1 \
  && yarn config set disable-self-update-check true -g \
- && rm -rf ~/.npm ~/.config /tmp/* \
+ && rm -rf ~/.npm ~/.config ~/.yarn* /tmp/* \
  && sed -i 's/"Extra file"/&\n\t  File.unlink File.join(gem_directory, extra)/' /usr/lib/ruby/2.3.0/rubygems/validator.rb
 
 ENV BUNDLE_SILENCE_ROOT_WARNING=1

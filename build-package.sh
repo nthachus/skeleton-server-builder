@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/bin/sh
 set -x
 
 if [ ! -f angular8-skeleton/dist/ng8-skeleton/index.html ] || [ ! -f sinatra-rest-skeleton/vendor/bundle/ruby/*/bin/unicorn ]; then
@@ -48,7 +48,7 @@ sed -i -e 's/server skeleton-api\|limit_rate/# &/' \
   -e 's,/etc/nginx/ssl/server.crt,/etc/ssl/certs/server-lvh.crt,' \
   -e 's,/etc/nginx/ssl/server.key,/etc/ssl/private/server-lvh.key,' \
   -e 's,/etc/nginx/ssl/ca.crt,/etc/ssl/certs/ca-skeleton.crt,' \
-  -e "s,/var/www/html,${APP_HOME:0:-7}frontend," \
+  -e 's,/var/www/html,/opt/skeleton/frontend,' \
   -e 's,/etc/nginx/data/,/etc/nginx/snippets/,' $PKG_ROOT/etc/nginx/sites-available/skeleton.conf
 rm -rf $APP_PATH/spec/fixtures/ldap_data $APP_PATH/spec/fixtures/nginx_data $APP_PATH/*Dockerfile $APP_PATH/docker-compose*
 
@@ -79,9 +79,9 @@ RAKE_ARGS='RACK_ENV=production >> log/cron.stdout.log 2>> log/cron.stderr.log'
 # Cronjobs
 mkdir -p $PKG_ROOT/etc/cron.d $PKG_ROOT/etc/logrotate.d
 echo "* *  * * *  $RUN_USER  cd $APP_HOME && rake app:delete_expired_uploads $RAKE_ARGS
-* *  * * *  $RUN_USER  cd $APP_HOME && rake app:identify_file_types $RAKE_ARGS
-*/2 *  * * *  $RUN_USER  cd $APP_HOME && rake app:compute_file_checksums $RAKE_ARGS
-*/3 *  * * *  $RUN_USER  cd $APP_HOME && rake app:delete_expired_sessions $RAKE_ARGS" > $PKG_ROOT/etc/cron.d/skeleton-server
+* *  * * *  $RUN_USER  cd $APP_HOME && rake app:identify_file_types[30] $RAKE_ARGS
+*/2 *  * * *  $RUN_USER  cd $APP_HOME && rake app:compute_file_checksums[15] $RAKE_ARGS
+* *  * * *  $RUN_USER  cd $APP_HOME && rake app:delete_expired_sessions $RAKE_ARGS" > $PKG_ROOT/etc/cron.d/skeleton-server
 
 echo "$APP_HOME/log/*.log {
   weekly
@@ -94,7 +94,7 @@ echo "$APP_HOME/log/*.log {
 }" > $PKG_ROOT/etc/logrotate.d/skeleton-api
 
 PKG_SIZE=`du -s -BK $PKG_ROOT | sed 's/K.*//'`
-DB_PWD=`grep -i 'password:' $APP_PATH/config/database.yml | sed 's/^.*: //'`
+DB_PWD=`grep -i 'password:' $APP_PATH/config/database.yml | tail -1 | sed 's/^.*: //'`
 
 # DEBIAN files
 mkdir -p $PKG_ROOT/DEBIAN
@@ -129,11 +129,11 @@ if [ ! -f /var/run/postgresql/*.pid ]; then
   echo 'PostgreSQL is not running' >&2
   exit 1
 fi
-sudo -u postgres psql -c \"CREATE ROLE skeleton WITH LOGIN CREATEDB PASSWORD '$DB_PWD'\"
-cd $APP_HOME && rake db:setup RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
+sudo -u postgres psql -c \"CREATE ROLE skeleton WITH LOGIN CREATEDB PASSWORD '$DB_PWD'\" 2>/dev/null || true
+cd $APP_HOME && rake db:drop db:setup RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
 
 # Website
-if ! nginx -v 2>&1 | sed 's,^.*nginx/,1.13.5\\n,' | sort -C -V ; then
+if ! nginx -v 2>&1 | sed 's,^.*nginx/,1.13.5\\\\n,' | sort -C -V ; then
   sed -i 's/ssl_client_escaped_cert/ssl_client_cert/' /etc/nginx/sites-available/skeleton.conf
 fi
 ln -sf /etc/nginx/sites-available/skeleton.conf /etc/nginx/sites-enabled/default

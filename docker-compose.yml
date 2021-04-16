@@ -14,3 +14,20 @@ services:
       tail -f /dev/null
       "
     stop_signal: SIGKILL
+
+  apk-builder:
+    build:
+      context: .
+      dockerfile: alpine.Dockerfile
+    image: "alpine-skeleton:3.11"
+    container_name: skeleton-builder
+    volumes:
+      - ".:/root/builder"
+    working_dir: /root
+    command: /bin/ash -c "
+      ./builder/build-frontend.sh &&
+      ./builder/build-backend.sh .alpine &&
+      ./builder/build-apk-package.sh &&
+      tail -f /dev/null
+      "
+    stop_signal: SIGKILL
