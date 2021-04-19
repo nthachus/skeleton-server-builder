@@ -5,7 +5,7 @@ if [ ! -f angular8-skeleton/dist/ng8-skeleton/index.html ] || [ ! -f sinatra-res
   exit 1
 fi
 
-PKG_VER=`grep -i '"version":' angular8-skeleton/package.json | sed 's/^.*: "\|",$//g'`
+PKG_VER=`grep -i '"version":' angular8-skeleton/package.json | sed 's/.*: "\|",.*//g'`
 PKG_ROOT=/tmp/skeleton-server-$PKG_VER
 APP_ROOT=$PKG_ROOT/opt/skeleton
 APP_PATH=$APP_ROOT/backend
@@ -13,9 +13,7 @@ APP_PATH=$APP_ROOT/backend
 RUBY_LIB_PATH=$PKG_ROOT/var/lib/gems
 RUBY_VER=`ls -1 sinatra-rest-skeleton/vendor/bundle/ruby | head -1`
 APP_HOME=/opt/skeleton/backend
-
-RUN_USER=www-data
-RUN_GROUP=adm
+RUN_AS=www-data
 
 # Application
 mkdir -p $APP_ROOT
@@ -53,16 +51,18 @@ sed -i -e 's/server skeleton-api\|limit_rate/# &/' \
 rm -rf $APP_PATH/spec/fixtures/ldap_data $APP_PATH/spec/fixtures/nginx_data $APP_PATH/*Dockerfile $APP_PATH/docker-compose*
 
 # Services
-chown $RUN_USER:$RUN_GROUP -R $APP_ROOT
+chown $RUN_AS -R $APP_ROOT
 mkdir -p $PKG_ROOT/lib/systemd/system
 echo "[Unit]
 Description=Unicorn Skeleton service
-After=network.target postgresql.service
+Requires=network.target
+After=postgresql.service
+ConditionPathExists=$APP_HOME/unicorn.rb
 
 [Service]
 Type=forking
 WorkingDirectory=$APP_HOME
-User=$RUN_USER
+User=$RUN_AS
 PIDFile=$APP_HOME/tmp/pids/unicorn.pid
 ExecStart=/usr/local/bin/unicorn -c unicorn.rb -E production -D
 ExecReload=/bin/kill -HUP \$MAINPID
@@ -78,10 +78,10 @@ RAKE_ARGS='RACK_ENV=production >> log/cron.stdout.log 2>> log/cron.stderr.log'
 
 # Cronjobs
 mkdir -p $PKG_ROOT/etc/cron.d $PKG_ROOT/etc/logrotate.d
-echo "* *  * * *  $RUN_USER  cd $APP_HOME && rake app:delete_expired_uploads $RAKE_ARGS
-* *  * * *  $RUN_USER  cd $APP_HOME && rake app:identify_file_types[30] $RAKE_ARGS
-*/2 *  * * *  $RUN_USER  cd $APP_HOME && rake app:compute_file_checksums[15] $RAKE_ARGS
-* *  * * *  $RUN_USER  cd $APP_HOME && rake app:delete_expired_sessions $RAKE_ARGS" > $PKG_ROOT/etc/cron.d/skeleton-server
+echo "* *  * * *  $RUN_AS  cd $APP_HOME && rake app:delete_expired_uploads $RAKE_ARGS
+* *  * * *  $RUN_AS  cd $APP_HOME && rake app:identify_file_types[30] $RAKE_ARGS
+*/2 *  * * *  $RUN_AS  cd $APP_HOME && rake app:compute_file_checksums[15] $RAKE_ARGS
+* *  * * *  $RUN_AS  cd $APP_HOME && rake app:delete_expired_sessions $RAKE_ARGS" > $PKG_ROOT/etc/cron.d/skeleton-server
 
 echo "$APP_HOME/log/*.log {
   weekly
@@ -93,7 +93,7 @@ echo "$APP_HOME/log/*.log {
   copytruncate
 }" > $PKG_ROOT/etc/logrotate.d/skeleton-api
 
-PKG_SIZE=`du -s -BK $PKG_ROOT | sed 's/K.*//'`
+PKG_SIZE=`du -s -k $PKG_ROOT | sed 's/[^0-9].*//'`
 DB_PWD=`grep -i 'password:' $APP_PATH/config/database.yml | tail -1 | sed 's/^.*: //'`
 
 # DEBIAN files
@@ -106,7 +106,7 @@ echo "Package: skeleton-server
 Version: $PKG_VER
 Section: web
 Priority: optional
-Architecture: all
+Architecture: amd64
 Maintainer: Thach Nguyen (https://github.com/nthachus)
 Homepage: https://github.com/nthachus/angular8-skeleton
 Description: An Angular application using Sinatra Restful-API skeleton.
@@ -129,7 +129,7 @@ if [ ! -f /var/run/postgresql/*.pid ]; then
   echo 'PostgreSQL is not running' >&2
   exit 1
 fi
-sudo -u postgres psql -c \"CREATE ROLE skeleton WITH LOGIN CREATEDB PASSWORD '$DB_PWD'\" 2>/dev/null || true
+su -s /bin/sh -c \"psql -c \\\"CREATE ROLE skeleton WITH LOGIN CREATEDB PASSWORD '$DB_PWD'\\\"\" postgres 2>/dev/null || true
 cd $APP_HOME && rake db:drop db:setup RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
 
 # Website
@@ -142,7 +142,7 @@ ln -sf /etc/nginx/sites-available/skeleton.conf /etc/nginx/sites-enabled/default
 if [ -d /run/systemd/system ]; then
   systemctl --system daemon-reload
 fi
-systemctl enable unicorn-skeleton.service" >> $PKG_ROOT/DEBIAN/postinst
+systemctl enable unicorn-skeleton.service || true" >> $PKG_ROOT/DEBIAN/postinst
 
 echo '#!/bin/sh' > $PKG_ROOT/DEBIAN/prerm
 echo "set -x
@@ -153,16 +153,16 @@ if [ ! -f /var/run/postgresql/*.pid ]; then
   exit 1
 fi
 cd $APP_HOME && rake db:drop RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
-sudo -u postgres psql -c \"DROP ROLE IF EXISTS skeleton\"
+su -s /bin/sh -c \"psql -c \\\"DROP ROLE IF EXISTS skeleton\\\"\" postgres
 
 # Website
 ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # Service
 if [ -f $APP_HOME/tmp/pids/*.pid ]; then
-  systemctl stop unicorn-skeleton.service
+  systemctl stop unicorn-skeleton.service || true
 fi
-systemctl disable unicorn-skeleton.service" >> $PKG_ROOT/DEBIAN/prerm
+systemctl disable unicorn-skeleton.service || true" >> $PKG_ROOT/DEBIAN/prerm
 
 echo '#!/bin/sh' > $PKG_ROOT/DEBIAN/postrm
 echo "set -x
@@ -174,5 +174,5 @@ fi" >> $PKG_ROOT/DEBIAN/postrm
 
 # Build package
 chmod +x $PKG_ROOT/DEBIAN/post* $PKG_ROOT/DEBIAN/pre*
-dpkg-deb -b $PKG_ROOT "$(dirname "$0")/skeleton-server_${PKG_VER}_all.deb"
+dpkg-deb -b $PKG_ROOT "$(dirname "$0")/skeleton-server_${PKG_VER}_amd64.deb"
 rm -rf angular8-skeleton/ sinatra-rest-skeleton/ /tmp/*
