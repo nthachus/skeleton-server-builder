@@ -13,13 +13,14 @@ APP_PATH=$APP_ROOT/backend
 RUBY_LIB_PATH=$PKG_ROOT/usr/lib/ruby/vendor_ruby/gems
 RUBY_VER=`ls -1 sinatra-rest-skeleton/vendor/bundle/ruby | head -1`
 APP_HOME=/opt/skeleton/backend
-RUN_AS=nginx
+RUN_AS=www-data
 
 # Application
 mkdir -p $APP_ROOT
 mv sinatra-rest-skeleton $APP_PATH
 mv angular8-skeleton/dist/ng8-skeleton $APP_ROOT/frontend
 rm -rf $APP_PATH/.git* $APP_PATH/.bundle $APP_PATH/coverage $APP_PATH/log/* $APP_PATH/storage/* $APP_PATH/tmp/*/*
+# disable 'preload_app' to apply HUP reload signal
 sed -i -e 's/# listen "/listen "/' -e 's/listen 3000/# &/' $APP_PATH/unicorn.rb
 sed -i 's/ skeleton-db/ localhost/' $APP_PATH/config/database.yml
 
@@ -53,7 +54,7 @@ sed -i -e 's/server skeleton-api\|limit_rate/# &/' \
 rm -rf $APP_PATH/spec/fixtures/ldap_data $APP_PATH/spec/fixtures/nginx_data $APP_PATH/*Dockerfile $APP_PATH/docker-compose*
 
 # Services
-chown $RUN_AS -R $APP_ROOT
+chown $RUN_AS: -R $APP_ROOT
 mkdir -p $PKG_ROOT/etc/init.d
 echo '#!/sbin/openrc-run' > $PKG_ROOT/etc/init.d/unicorn-skeleton
 echo "
@@ -128,7 +129,9 @@ echo '#!/bin/sh' > $PKG_ROOT/.pre-install
 echo "set -x
 
 if [ -d /opt ]; then touch /opt/.placeholder; fi
-if [ -d /usr/local/bin ]; then touch /usr/local/bin/.placeholder; fi" >> $PKG_ROOT/.pre-install
+if [ -d /usr/local/bin ]; then touch /usr/local/bin/.placeholder; fi
+
+adduser -S -u 82 -D -H -h /var/www -g www-data -G www-data www-data 2>/dev/null || true" >> $PKG_ROOT/.pre-install
 
 echo '#!/bin/sh' > $PKG_ROOT/.post-install
 echo "set -x
@@ -173,7 +176,23 @@ if [ -f $APP_HOME/tmp/pids/*.pid ]; then
 fi
 rc-update del unicorn-skeleton || true" >> $PKG_ROOT/.pre-deinstall
 
+RSA_FILE="$(dirname "`realpath "$0"`")/skeleton-server-$PKG_VER.rsa.tgz"
+
 # Build package
-chmod +x $PKG_ROOT/.pre-* $PKG_ROOT/.post-*
-tar -czvf "$(dirname "$0")/skeleton-server-${PKG_VER}.alpine.tgz" -C $PKG_ROOT . >/dev/null
-rm -rf angular8-skeleton/ sinatra-rest-skeleton/ /tmp/*
+rm -rf angular8-skeleton/ sinatra-rest-skeleton/
+if [ -f $RSA_FILE ]; then
+  tar -xzf $RSA_FILE -C /root/
+else
+  echo '/root/.abuild/nthachus.github.com-4a6a0840.rsa' | abuild-keygen -a
+  tar -czf $RSA_FILE -C /root/ .abuild/
+fi
+
+cd $PKG_ROOT
+chmod +x .pre-* .post-*
+tar --xattrs -f - -c * | abuild-tar --hash | gzip -9 > ../data.tar.gz
+sha256sum ../data.tar.gz | sed -e 's/[[:space:]].*//' -e 's/^/datahash = /' >> .PKGINFO
+tar -f - -c .??* | abuild-tar --cut | gzip -9 > ../control.tar.gz
+
+abuild-sign -q ../control.tar.gz
+cat ../control.tar.gz ../data.tar.gz > "${RSA_FILE%.rsa*}.apk"
+rm -rf /tmp/*

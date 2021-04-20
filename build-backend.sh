@@ -10,10 +10,10 @@ if [ ! -d $PRJ_NAME ]; then
   if [ ! -d $PRJ_DIR ]; then
     if [ -f $DIST_FILE ]; then
       mkdir $PRJ_DIR
-      tar -xzvf $DIST_FILE -C $PRJ_DIR/ >/dev/null
+      tar -xzf $DIST_FILE -C $PRJ_DIR/
     else
       wget -O main.zip -nv --no-check-certificate https://github.com/nthachus/$PRJ_NAME/archive/refs/heads/main.zip
-      unzip main.zip >/dev/null
+      unzip -q main.zip
       rm -rf main.zip ~/.wget* /tmp/*
     fi
   fi
@@ -37,5 +37,5 @@ if [ ! -f $PRJ_NAME/vendor/bundle/ruby/$RUBY_VER/bin/unicorn ]; then
     ln -s ./development.rb db/seeds/production.rb
   fi
 
-  tar -czvf $DIST_FILE . >/dev/null
+  tar -czf $DIST_FILE .
 fi

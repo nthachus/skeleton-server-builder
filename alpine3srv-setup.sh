@@ -37,12 +37,12 @@ ufw enable
 
 # Setup users
 sed -i 's/^# \(%wheel ALL=(ALL) ALL\)/\1/' /etc/sudoers
+adduser -S -u 82 -D -H -h /var/www -g www-data -G www-data www-data
 adduser -g 'System Administrator' -D sysadmin
 echo 'sysadmin:abc@123' | chpasswd
 adduser sysadmin adm
 adduser sysadmin wheel
 adduser sysadmin www-data
-adduser sysadmin nginx
 passwd -d root
 passwd -l root
 
@@ -51,6 +51,7 @@ sed -i 's/#\(PermitRootLogin\).*/&\n\1 no/' /etc/ssh/sshd_config
 sed -i 's/"Extra file"/&\n\t  File.unlink File.join(gem_directory, extra)/' /usr/lib/ruby/2.6.0/rubygems/validator.rb
 sed -i "s/#\(listen_addresses\)/\1 = '*'\n&/" /usr/share/postgresql/postgresql.conf.sample
 sed -i 's,# IPv6,host\tall\t\tall\t\t192.168.0.0/16\t\tmd5\n&,' /usr/share/postgresql/pg_hba.conf.sample
+sed -i 's/user nginx;/user www-data;/' /etc/nginx/nginx.conf
 
 truncate -s0 /var/log/messages /var/log/*.log
 #poweroff

@@ -20,6 +20,7 @@ mkdir -p $APP_ROOT
 mv sinatra-rest-skeleton $APP_PATH
 mv angular8-skeleton/dist/ng8-skeleton $APP_ROOT/frontend
 rm -rf $APP_PATH/.git* $APP_PATH/.bundle $APP_PATH/coverage $APP_PATH/log/* $APP_PATH/storage/* $APP_PATH/tmp/*/*
+# disable 'preload_app' to apply HUP reload signal
 sed -i -e 's/# listen "/listen "/' -e 's/listen 3000/# &/' $APP_PATH/unicorn.rb
 sed -i 's/ skeleton-db/ localhost/' $APP_PATH/config/database.yml
 
@@ -51,7 +52,7 @@ sed -i -e 's/server skeleton-api\|limit_rate/# &/' \
 rm -rf $APP_PATH/spec/fixtures/ldap_data $APP_PATH/spec/fixtures/nginx_data $APP_PATH/*Dockerfile $APP_PATH/docker-compose*
 
 # Services
-chown $RUN_AS -R $APP_ROOT
+chown $RUN_AS: -R $APP_ROOT
 mkdir -p $PKG_ROOT/lib/systemd/system
 echo "[Unit]
 Description=Unicorn Skeleton service
