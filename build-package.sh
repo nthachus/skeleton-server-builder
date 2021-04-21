@@ -125,11 +125,12 @@ if [ -d /usr/local/bin ]; then touch /usr/local/bin/.placeholder; fi" >> $PKG_RO
 echo '#!/bin/sh' > $PKG_ROOT/DEBIAN/postinst
 echo "set -x
 
-# Database
 if [ ! -f /var/run/postgresql/*.pid ]; then
   echo 'PostgreSQL is not running' >&2
   exit 1
 fi
+
+# Database
 su -s /bin/sh -c \"psql -c \\\"CREATE ROLE skeleton WITH LOGIN CREATEDB PASSWORD '$DB_PWD'\\\"\" postgres 2>/dev/null || true
 cd $APP_HOME && rake db:drop db:setup RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
 
@@ -141,36 +142,37 @@ ln -sf /etc/nginx/sites-available/skeleton.conf /etc/nginx/sites-enabled/default
 
 # Service
 if [ -d /run/systemd/system ]; then
-  systemctl --system daemon-reload
+  systemctl --system daemon-reload 2>/dev/null || true
 fi
 systemctl enable unicorn-skeleton.service || true" >> $PKG_ROOT/DEBIAN/postinst
 
 echo '#!/bin/sh' > $PKG_ROOT/DEBIAN/prerm
 echo "set -x
 
-# Database
 if [ ! -f /var/run/postgresql/*.pid ]; then
   echo 'PostgreSQL is not running' >&2
   exit 1
 fi
-cd $APP_HOME && rake db:drop RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
-su -s /bin/sh -c \"psql -c \\\"DROP ROLE IF EXISTS skeleton\\\"\" postgres
-
-# Website
-ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default
 
 # Service
 if [ -f $APP_HOME/tmp/pids/*.pid ]; then
   systemctl stop unicorn-skeleton.service || true
 fi
-systemctl disable unicorn-skeleton.service || true" >> $PKG_ROOT/DEBIAN/prerm
+systemctl disable unicorn-skeleton.service || true
+
+# Database
+kill \$(ps -aux | grep '^$RUN_AS[ \\\\t].*skeleton.*rake app:' | awk '{print \$2}') 2>/dev/null || true
+cd $APP_HOME && rake db:drop RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
+su -s /bin/sh -c \"psql -c \\\"DROP ROLE IF EXISTS skeleton\\\"\" postgres || true
+
+# Website
+ln -sf /etc/nginx/sites-available/default /etc/nginx/sites-enabled/default" >> $PKG_ROOT/DEBIAN/prerm
 
 echo '#!/bin/sh' > $PKG_ROOT/DEBIAN/postrm
 echo "set -x
 
-# Service
 if [ -d /run/systemd/system ]; then
-  systemctl --system daemon-reload
+  systemctl --system daemon-reload 2>/dev/null || true
 fi" >> $PKG_ROOT/DEBIAN/postrm
 
 # Build package

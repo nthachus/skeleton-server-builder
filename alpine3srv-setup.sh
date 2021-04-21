@@ -13,7 +13,7 @@ apk upgrade
 
 # Install dependencies
 #apk search 'open-vm'
-apk add --no-cache open-vm-tools openssh-server sudo logrotate ip6tables python3 \
+apk add --no-cache open-vm-tools sudo logrotate ip6tables python3 \
   postgresql ruby-full file uchardet p7zip graphicsmagick nginx nginx-mod-stream
 # libreoffice-writer libreoffice-calc libreoffice-impress
 apk add --no-cache --repository http://dl-cdn.alpinelinux.org/alpine/v3.13/community ufw
@@ -23,7 +23,6 @@ rm -rf /var/cache/apk/* /tmp/*
 #rc-status -a
 rc-update add open-vm-tools boot
 rc-update add ufw boot
-rc-update add sshd
 rc-update add postgresql
 rc-update add nginx
 
@@ -51,7 +50,7 @@ sed -i 's/#\(PermitRootLogin\).*/&\n\1 no/' /etc/ssh/sshd_config
 sed -i 's/"Extra file"/&\n\t  File.unlink File.join(gem_directory, extra)/' /usr/lib/ruby/2.6.0/rubygems/validator.rb
 sed -i "s/#\(listen_addresses\)/\1 = '*'\n&/" /usr/share/postgresql/postgresql.conf.sample
 sed -i 's,# IPv6,host\tall\t\tall\t\t192.168.0.0/16\t\tmd5\n&,' /usr/share/postgresql/pg_hba.conf.sample
-sed -i 's/user nginx;/user www-data;/' /etc/nginx/nginx.conf
+#sed -i 's/user nginx;/user www-data;/' /etc/nginx/nginx.conf
 
 truncate -s0 /var/log/messages /var/log/*.log
 #poweroff

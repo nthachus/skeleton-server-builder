@@ -5,10 +5,10 @@ ENV BUNDLE_SILENCE_ROOT_WARNING=1
 
 RUN apk update \
  && apk add --no-cache \
-  abuild \
   ruby-full libpq \
   build-base linux-headers autoconf zlib-dev ruby-dev postgresql-dev \
   nodejs yarn \
+  abuild unzip \
  && rm -rf /var/cache/apk/* /tmp/*
 
 # skip installing gem documentation

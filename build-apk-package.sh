@@ -65,10 +65,8 @@ required_files=\"$APP_HOME/unicorn.rb\"
 pidfile=$APP_HOME/tmp/pids/unicorn.pid
 directory=$APP_HOME
 command_user=$RUN_AS
-
 command=/usr/local/bin/unicorn
 command_args=\"-c unicorn.rb -E production -D\"
-command_background=true
 stopsig=QUIT
 
 depend() {
@@ -81,6 +79,7 @@ reload() {
   start-stop-daemon --signal HUP --pidfile \$pidfile
   eend \$?
 }" >> $PKG_ROOT/etc/init.d/unicorn-skeleton
+chmod +x $PKG_ROOT/etc/init.d/*
 
 RAKE_ARGS='RACK_ENV=production >> log/cron.stdout.log 2>> log/cron.stderr.log'
 
@@ -136,11 +135,12 @@ adduser -S -u 82 -D -H -h /var/www -g www-data -G www-data www-data 2>/dev/null 
 echo '#!/bin/sh' > $PKG_ROOT/.post-install
 echo "set -x
 
-# Database
 if [ ! -f /var/lib/postgresql/*/data/*.pid ]; then
   echo 'PostgreSQL is not running' >&2
   exit 1
 fi
+
+# Database
 su -s /bin/sh -c \"psql -c \\\"CREATE ROLE skeleton WITH LOGIN CREATEDB PASSWORD '$DB_PWD'\\\"\" postgres 2>/dev/null || true
 cd $APP_HOME && rake db:drop db:setup RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
 
@@ -157,26 +157,28 @@ ln -s ./.post-install $PKG_ROOT/.post-upgrade
 echo '#!/bin/sh' > $PKG_ROOT/.pre-deinstall
 echo "set -x
 
-# Database
 if [ ! -f /var/lib/postgresql/*/data/*.pid ]; then
   echo 'PostgreSQL is not running' >&2
   exit 1
-fi
-cd $APP_HOME && rake db:drop RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
-su -s /bin/sh -c \"psql -c \\\"DROP ROLE IF EXISTS skeleton\\\"\" postgres
-
-# Website
-if [ -e /etc/nginx/conf.d/default.conf- ]; then
-  mv -f /etc/nginx/conf.d/default.conf- /etc/nginx/conf.d/default.conf
 fi
 
 # Service
 if [ -f $APP_HOME/tmp/pids/*.pid ]; then
   rc-service unicorn-skeleton stop || true
 fi
-rc-update del unicorn-skeleton || true" >> $PKG_ROOT/.pre-deinstall
+rc-update del unicorn-skeleton || true
 
-RSA_FILE="$(dirname "`realpath "$0"`")/skeleton-server-$PKG_VER.rsa.tgz"
+# Database
+kill \$( (ps -aux 2>/dev/null || ps -o user,pid,args) | grep '^$RUN_AS[ \\t].*rake app:' | awk '{print \$2}' ) 2>/dev/null || true
+cd $APP_HOME && rake db:drop RACK_ENV=production DISABLE_DATABASE_ENVIRONMENT_CHECK=1
+su -s /bin/sh -c \"psql -c \\\"DROP ROLE IF EXISTS skeleton\\\"\" postgres || true
+
+# Website
+if [ -e /etc/nginx/conf.d/default.conf- ]; then
+  mv -f /etc/nginx/conf.d/default.conf- /etc/nginx/conf.d/default.conf
+fi" >> $PKG_ROOT/.pre-deinstall
+
+RSA_FILE="$(dirname "`realpath "$0"`")/abuild-rsa.tgz"
 
 # Build package
 rm -rf angular8-skeleton/ sinatra-rest-skeleton/
@@ -191,8 +193,8 @@ cd $PKG_ROOT
 chmod +x .pre-* .post-*
 tar --xattrs -f - -c * | abuild-tar --hash | gzip -9 > ../data.tar.gz
 sha256sum ../data.tar.gz | sed -e 's/[[:space:]].*//' -e 's/^/datahash = /' >> .PKGINFO
-tar -f - -c .??* | abuild-tar --cut | gzip -9 > ../control.tar.gz
+tar -f - -c .???* | abuild-tar --cut | gzip -9 > ../control.tar.gz
 
 abuild-sign -q ../control.tar.gz
-cat ../control.tar.gz ../data.tar.gz > "${RSA_FILE%.rsa*}.apk"
+cat ../control.tar.gz ../data.tar.gz > "$(dirname $RSA_FILE)/skeleton-server-$PKG_VER.apk"
 rm -rf /tmp/*
