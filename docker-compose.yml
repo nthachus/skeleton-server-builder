@@ -31,3 +31,20 @@ services:
       tail -f /dev/null
       "
     stop_signal: SIGKILL
+
+  deb-builder:
+    build:
+      context: .
+      dockerfile: ubuntu.Dockerfile
+    image: "ubuntu-skeleton:bionic"
+    container_name: skeleton-builder
+    volumes:
+      - ".:/root/builder"
+    working_dir: /root
+    command: /bin/bash -c "
+      ./builder/build-frontend.sh &&
+      ./builder/build-backend.sh .ubuntu &&
+      ./builder/build-package.sh udeb &&
+      tail -f /dev/null
+      "
+    stop_signal: SIGKILL

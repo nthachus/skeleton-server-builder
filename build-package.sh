@@ -177,5 +177,5 @@ fi" >> $PKG_ROOT/DEBIAN/postrm
 
 # Build package
 chmod +x $PKG_ROOT/DEBIAN/post* $PKG_ROOT/DEBIAN/pre*
-dpkg-deb -b $PKG_ROOT "$(dirname "$0")/skeleton-server_${PKG_VER}_amd64.deb"
+dpkg-deb -b $PKG_ROOT "$(dirname "$0")/skeleton-server_${PKG_VER}_amd64.${1:-deb}"
 rm -rf angular8-skeleton/ sinatra-rest-skeleton/ /tmp/*
