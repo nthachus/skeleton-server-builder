@@ -44,7 +44,7 @@ services:
     command: /bin/bash -c "
       ./builder/build-frontend.sh &&
       ./builder/build-backend.sh .ubuntu &&
-      ./builder/build-package.sh udeb &&
+      ./builder/build-package.sh ubuntu.deb &&
       tail -f /dev/null
       "
     stop_signal: SIGKILL
