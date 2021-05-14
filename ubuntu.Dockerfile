@@ -20,9 +20,9 @@ RUN echo "deb http://deb.nodesource.com/node_10.x bionic main" > /etc/apt/source
   wget unzip \
  && rm -rf /var/cache/apt/* /var/lib/apt/lists/* /tmp/* /etc/apt/sources.list.d/nodesource.list
 
+ENV BUNDLE_SILENCE_ROOT_WARNING=1
+RUN sed -i 's/"Extra file"/&\n\t  File.unlink File.join(gem_directory, extra)/' /usr/lib/ruby/2.5.0/rubygems/validator.rb
+
 RUN npm install -g yarn@1 \
  && yarn config set disable-self-update-check true -g \
- && rm -rf ~/.npm ~/.config ~/.yarn* /tmp/* \
- && sed -i 's/"Extra file"/&\n\t  File.unlink File.join(gem_directory, extra)/' /usr/lib/ruby/2.5.0/rubygems/validator.rb
-
-ENV BUNDLE_SILENCE_ROOT_WARNING=1
+ && rm -rf ~/.npm ~/.config ~/.yarn* /tmp/*

@@ -1,41 +1,24 @@
 #!/bin/sh
-set -x
+set -- sinatra-rest-skeleton '' "$(getconf LONG_BIT)$@"
+. "$(dirname "$0")/download-prj.sh" "$@"
 
-PRJ_NAME=sinatra-rest-skeleton
-PRJ_DIR=$PRJ_NAME-main
-DIST_FILE="$(dirname "`realpath "$0"`")/$PRJ_NAME$1.tgz"
-RUBY_VER=`gem env | grep -m1 'USER INSTALL' | sed 's,^.*/,,g'`
-
-if [ ! -d $PRJ_NAME ]; then
-  if [ ! -d $PRJ_DIR ]; then
-    if [ -f $DIST_FILE ]; then
-      mkdir $PRJ_DIR
-      tar -xzf $DIST_FILE -C $PRJ_DIR/
-    else
-      wget -O main.zip -nv --no-check-certificate https://github.com/nthachus/$PRJ_NAME/archive/refs/heads/main.zip
-      unzip -q main.zip
-      rm -rf main.zip ~/.wget* /tmp/*
-    fi
-  fi
-  mv $PRJ_DIR $PRJ_NAME
+if [ -e "$PRJ_NAME/vendor/bundle/ruby"/*/bin/unicorn ]; then
+  exit 0
 fi
 
-if [ ! -f $PRJ_NAME/vendor/bundle/ruby/$RUBY_VER/bin/unicorn ]; then
-  cd $PRJ_NAME
-  if [ "2.3.0" != "$RUBY_VER" ]; then
-    for v in json minitest; do
-      sed -i "s/^    $v (.*)/    $(gem list $v | grep $v | sed 's,(.* ,(,g')/" Gemfile.lock
-    done
-  fi
+sed -i "s/^# \(gem 'rake'\)/\1/" "$PRJ_NAME/Gemfile"
+sed -i '/^    \(json\|minitest\) /d' "$PRJ_NAME/Gemfile.lock"
 
-  bundle install --path vendor/bundle --without 'test:development' --frozen --no-cache
-  GEM_HOME="$PWD/vendor/bundle/ruby/$RUBY_VER" gem check
-  rm -rf $DIST_FILE ~/.bundle ~/.gem /tmp/*
+( cd "$PRJ_NAME"; \
+  bundle install --path vendor/bundle --without 'test:development' --no-cache; \
+  tr '\n' '\f' < Gemfile.lock | sed 's/\f\(RUBY\|BUNDLED\).*//' | tr '\f' '\n' | tee Gemfile.lock; \
+  GEM_HOME="$(echo "$PWD/vendor/bundle/ruby"/*)" gem check; \
+  rm -rf .git* coverage/ log/* storage/* tmp/*/* ~/.bundle ~/.gem /tmp/* )
 
-  find vendor/bundle/ruby/$RUBY_VER/extensions \( -iname '*.log' -or -iname '*.out' \) -type f -delete
-  if [ ! -e db/seeds/production.rb ]; then
-    ln -s ./development.rb db/seeds/production.rb
-  fi
-
-  tar -czf $DIST_FILE .
+find "$PRJ_NAME/vendor/bundle/ruby"/*/extensions \( -iname '*.log' -o -iname '*.out' \) -type f -delete
+if [ ! -e "$PRJ_NAME/db/seeds/production.rb" ]; then
+  ln -s development.rb "$PRJ_NAME/db/seeds/production.rb"
 fi
+
+tar -czf "$OUT_FILE" -C "$PRJ_NAME/" .
+tar -tzvf "$OUT_FILE" | sort -k6 > "${OUT_FILE%.*}.txt"

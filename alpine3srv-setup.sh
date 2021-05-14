@@ -1,5 +1,5 @@
 #!/bin/sh
-set -x
+set -xe
 
 # Reduce boot time
 sed -i 's/_TIMEOUT=[0-9]*$/_TIMEOUT=0/' /etc/default/grub

@@ -1,5 +1,5 @@
 #!/bin/sh
-set -x
+set -xe
 
 # Answer file for setup-alpine script
 setup-alpine -c answerfile.cfg ; \

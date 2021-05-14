@@ -1,7 +1,9 @@
 version: "3"
 services:
   builder:
-    build: .
+    build:
+      context: .
+      dockerfile: debian.Dockerfile
     image: "debian-skeleton:slim"
     container_name: skeleton-builder
     volumes:
