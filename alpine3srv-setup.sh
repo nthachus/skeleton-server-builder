@@ -39,7 +39,7 @@ passwd -l root
 
 # Configure services
 sed -i 's/#\(PermitRootLogin\).*/&\n\1 no/' /etc/ssh/sshd_config
-sed -i 's/"Extra file"/&\n\t  File.unlink File.join(gem_directory, extra)/' /usr/lib/ruby/2.6.0/rubygems/validator.rb
+sed -i 's/"Extra file"/&\n\t  File.unlink File.join(gem_directory, extra)/' /usr/lib/ruby/*/rubygems/validator.rb
 sed -i "s/#\(listen_addresses\)/\1 = '*'\n&/" /usr/share/postgresql/postgresql.conf.sample
 sed -i 's,# IPv6,host\tall\t\tall\t\t192.168.0.0/16\t\tmd5\n&,' /usr/share/postgresql/pg_hba.conf.sample
 adduser -S -u 82 -D -H -h /var/www -g www-data -G www-data www-data

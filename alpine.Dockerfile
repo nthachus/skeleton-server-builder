@@ -13,7 +13,7 @@ RUN apk update \
 
 # skip installing gem documentation
 RUN printf 'install: --no-document\nupdate: --no-document\n' >> /etc/gemrc \
- && sed -i 's/"Extra file"/&\n\t  File.unlink File.join(gem_directory, extra)/' /usr/lib/ruby/2.6.0/rubygems/validator.rb
+ && sed -i 's/"Extra file"/&\n\t  File.unlink File.join(gem_directory, extra)/' /usr/lib/ruby/*/rubygems/validator.rb
 
 RUN adduser root abuild \
  && addgroup -S -g 82 www-data \
