@@ -7,14 +7,20 @@ fi
 
 PKG_NAME=skeleton-server
 PKG_VER="$(grep '^ *"version":' angular8-skeleton/package.json | sed 's/^.*": *"\(.*\)".*/\1/')"
-PKG_ROOT="/tmp/$PKG_NAME-$PKG_VER"
+[ -d sinatra-rest-skeleton/vendor/bundle/ruby/*/extensions/*64* ] && ARCH=x86_64 || ARCH=x86
+
+OUT_FILE="$(dirname "$0")/$PKG_NAME-$PKG_VER.$ARCH.apk"
+if [ -f "$OUT_FILE" ]; then
+  exit 0
+fi
 
 APP_HOME="/opt/$PKG_NAME/backend"
-APP_PATH="$PKG_ROOT$APP_HOME"
-APP_ROOT="${APP_PATH%/*}"
-
 RUN_AS=www-data
 SVC_NAME=unicorn-skeleton
+
+PKG_ROOT="/tmp/$PKG_NAME-$PKG_VER"
+APP_PATH="$PKG_ROOT$APP_HOME"
+APP_ROOT="${APP_PATH%/*}"
 
 # Application
 mkdir -p "$APP_ROOT"
@@ -100,9 +106,7 @@ echo "$APP_HOME/log/*.log {
 # APK files
 PKG_SIZE=`du -sk "$PKG_ROOT" | sed 's/[^0-9].*//'`
 DB_PWD="$(grep '^ *password:' "$APP_PATH/config/database.yml" | tail -1 | sed 's/^ *password: *//')"
-
-[ -d "$APP_PATH/vendor/bundle/ruby"/*/extensions/*64* ] && ARCH=x86_64 || ARCH=x86
-RUBY_VER="$(ls -1p "$APP_PATH/vendor/bundle/ruby" | grep -m1 '\.0/$' | sed 's,\.0/$,,')"
+RUBY_VER="$(ls -1p "$APP_PATH/vendor/bundle/ruby" | grep -m1 '\..*/$' | sed 's,\.[^\.]*/$,,')"
 
 echo "pkgname = $PKG_NAME
 pkgver = $PKG_VER
@@ -192,8 +196,7 @@ rc-service nginx reload >/dev/null 2>&1 || true" >> "$PKG_ROOT/.post-deinstall"
 
 
 # Build package
-RSA_FILE="$(dirname "$0")/abuild-rsa.tgz"
-OUT_FILE="${RSA_FILE%/*}/$PKG_NAME-$PKG_VER.$ARCH.apk"
+RSA_FILE="${OUT_FILE%/*}/abuild-rsa.tgz"
 
 if [ -f "$RSA_FILE" ]; then
   tar -xzf "$RSA_FILE" -C ~/

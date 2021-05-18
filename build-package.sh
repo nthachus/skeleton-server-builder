@@ -7,14 +7,20 @@ fi
 
 PKG_NAME=skeleton-server
 PKG_VER="$(grep '^ *"version":' angular8-skeleton/package.json | sed 's/^.*": *"\(.*\)".*/\1/')"
-PKG_ROOT="/tmp/$PKG_NAME-$PKG_VER"
+[ -d sinatra-rest-skeleton/vendor/bundle/ruby/*/extensions/*64* ] && ARCH=amd64 || ARCH=i386
+
+OUT_FILE="$(dirname "$0")/${PKG_NAME}_${PKG_VER}_$ARCH.${1:-deb}"
+if [ -f "$OUT_FILE" ]; then
+  exit 0
+fi
 
 APP_HOME="/opt/$PKG_NAME/backend"
-APP_PATH="$PKG_ROOT$APP_HOME"
-APP_ROOT="${APP_PATH%/*}"
-
 RUN_AS=www-data
 SVC_NAME=unicorn-skeleton
+
+PKG_ROOT="/tmp/$PKG_NAME-$PKG_VER"
+APP_PATH="$PKG_ROOT$APP_HOME"
+APP_ROOT="${APP_PATH%/*}"
 
 # Application
 mkdir -p "$APP_ROOT"
@@ -95,9 +101,7 @@ echo "$APP_HOME/log/*.log {
 # DEBIAN files
 PKG_SIZE=`du -sk "$PKG_ROOT" | sed 's/[^0-9].*//'`
 DB_PWD="$(grep '^ *password:' "$APP_PATH/config/database.yml" | tail -1 | sed 's/^ *password: *//')"
-
-[ -d "$APP_PATH/vendor/bundle/ruby"/*/extensions/*64* ] && ARCH=amd64 || ARCH=i386
-RUBY_VER="$(ls -1p "$APP_PATH/vendor/bundle/ruby" | grep -m1 '\.0/$')"
+RUBY_VER="$(ls -1p "$APP_PATH/vendor/bundle/ruby" | grep -m1 '\..*/$')"
 
 mkdir -p "$PKG_ROOT/DEBIAN"
 ( find "$PKG_ROOT/etc" -type f ! -path "$PKG_ROOT/etc/ssl/*" ; ls -1 "$APP_PATH/config"/*.yml ) | sort | sed "s,^$PKG_ROOT,," > "$PKG_ROOT/DEBIAN/conffiles"
@@ -181,8 +185,6 @@ fi" >> "$PKG_ROOT/DEBIAN/postrm"
 
 
 # Build package
-OUT_FILE="$(dirname "$0")/${PKG_NAME}_${PKG_VER}_$ARCH.${1:-deb}"
-
 dpkg-deb -b "$PKG_ROOT" "$OUT_FILE"
 ( dpkg-deb --ctrl-tarfile "$OUT_FILE" | tar -tv | sort -k6 ; dpkg-deb -c "$OUT_FILE" | sort -k6 ) > "${OUT_FILE%.*}.txt"
 
