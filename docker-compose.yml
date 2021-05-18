@@ -50,3 +50,35 @@ services:
       tail -f /dev/null
       "
     stop_signal: SIGKILL
+
+
+  deb-runtime:
+    build:
+      context: .
+      dockerfile: debian-runtime.Dockerfile
+    image: "skeleton-debian:slim"
+    container_name: skeleton-runtime
+    volumes:
+      - "/sys/fs/cgroup:/sys/fs/cgroup:ro"
+      - ".:/mnt/builder"
+    working_dir: /root
+    privileged: true
+    #tty: true
+    ports:
+      - 5432:5432
+      - 80:80
+      - 443:443
+
+  verifier:
+    image: "nthachus/docker-cli:19.03"
+    container_name: skeleton-verifier
+    volumes:
+      - "/var/run/docker.sock:/var/run/docker.sock:ro"
+    depends_on:
+      - builder
+      - deb-runtime
+    command: /bin/ash -c "
+      docker exec -i skeleton-runtime /mnt/builder/verify-package.sh &&
+      tail -f /dev/null
+      "
+    stop_signal: SIGKILL
