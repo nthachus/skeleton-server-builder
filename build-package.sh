@@ -144,9 +144,9 @@ if [ -d /run/systemd/system ]; then
   systemctl --system daemon-reload 2>/dev/null || true
 fi
 systemctl enable '$SVC_NAME.service' || true
-systemctl start '$SVC_NAME.service' || true" >> "$PKG_ROOT/DEBIAN/postinst"
 
-echo 'activate-noawait nginx-reload' > "$PKG_ROOT/DEBIAN/triggers"
+echo '*** System restart required ***' | tee /var/run/reboot-required
+echo '$PKG_NAME' >> /var/run/reboot-required.pkgs" >> "$PKG_ROOT/DEBIAN/postinst"
 
 echo '#!/bin/sh' > "$PKG_ROOT/DEBIAN/prerm"
 echo "set -xe

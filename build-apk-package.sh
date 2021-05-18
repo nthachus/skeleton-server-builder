@@ -152,11 +152,11 @@ su -s /bin/sh -c \"psql -c \\\"CREATE ROLE skeleton WITH LOGIN CREATEDB PASSWORD
 if [ -e /etc/nginx/conf.d/default.conf ]; then
   mv -f /etc/nginx/conf.d/default.conf /etc/nginx/conf.d/default.conf-
 fi
-rc-service nginx reload >/dev/null 2>&1 || true
 
 # Service
 rc-update add '$SVC_NAME' || true
-rc-service '$SVC_NAME' start || true" >> "$PKG_ROOT/.post-install"
+
+echo '*** System restart required ***'" >> "$PKG_ROOT/.post-install"
 
 ln -s .post-install "$PKG_ROOT/.post-upgrade"
 
@@ -189,8 +189,7 @@ fi
 # Website
 if [ -e /etc/nginx/conf.d/default.conf- ]; then
   mv -f /etc/nginx/conf.d/default.conf- /etc/nginx/conf.d/default.conf
-fi
-rc-service nginx reload >/dev/null 2>&1 || true" >> "$PKG_ROOT/.post-deinstall"
+fi" >> "$PKG_ROOT/.post-deinstall"
 
 ( cd "$PKG_ROOT" && chmod +x .pre-* .post-* )
 
